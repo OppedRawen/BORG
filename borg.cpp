@@ -1,84 +1,108 @@
 #include <iostream>
 #include <fstream>
-#include <string>
-#include <sstream>
 #include <vector>
 #include <unordered_map>
+#include <string>
+#include <sstream>
 
-const int TABLESIZE = 101;
+using namespace std;
+
+const int TABLESIZE = 100;
 
 struct Variable {
-    std::string name;
+    string name;
     int value;
-    int scope;
+    Variable(string name, int value) : name(name), value(value) {}
 };
 
-int hashFunction(const std::string& varName) {
-    int hash = 0;
-    for (size_t i = 0; i < varName.size(); ++i) {
-        hash += (varName[i] * (i + 1)) % TABLESIZE;
+int computeHash(string varName) {
+    int sum = 0;
+    for (int i = 0; i < varName.size(); i++) {
+        sum += (varName[i] * (i+1));
     }
-    return hash % TABLESIZE;
+    return sum % TABLESIZE;
 }
 
 int main() {
-    std::string filename;
-    std::cout << "Enter the filename: ";
-    std::cin >> filename;
-
-    std::ifstream inputFile(filename);
-    if (!inputFile.is_open()) {
-        std::cerr << "Failed to open the file." << std::endl;
-        return 1;
-    }
-
-    std::vector<std::vector<Variable>> hashTable(TABLESIZE);
-    std::string line;
-    int currentScope = 0;
-
-    while (std::getline(inputFile, line)) {
-        std::istringstream iss(line);
-        std::string token;
-        iss >> token;
-
-        if (token == "START") {
-            currentScope++;
-        } else if (token == "FINISH") {
-            currentScope--;
-            for (auto& bucket : hashTable) {
-                bucket.erase(std::remove_if(bucket.begin(), bucket.end(), [&](const Variable& var) {
-                    return var.scope > currentScope;
-                }), bucket.end());
+    vector<unordered_map<int, Variable>> scopes;
+    ifstream infile("borg_program.borg");
+    string line;
+    while (getline(infile, line)) {
+        istringstream iss(line);
+        string command;
+        iss >> command;
+        if (command == "START") {
+            scopes.push_back(unordered_map<int, Variable>());
+        } else if (command == "FINISH") {
+            if (!scopes.empty()) {
+                scopes.pop_back();
             }
-        } else if (token == "COM") {
+        } else if (command == "COM") {
             continue;
-        } else if (token == "VAR") {
-            std::string varName;
+        } else if (command == "VAR") {
+            string varName, equalSign;
+            int value;
+            iss >> varName >> equalSign >> value;
+            int hash = computeHash(varName);
+            scopes.back().insert({hash, Variable(varName, value)});
+        } else if (command == "PRINT") {
+            string varName;
             iss >> varName;
-            int hash = hashFunction(varName);
-            hashTable[hash].push_back({varName, 0, currentScope});
-        } else if (token == "PRINT") {
-            std::string expression;
-            iss >> expression;
-
-            bool found = false;
-            for (const auto& var : hashTable[hashFunction(expression)]) {
-                if (var.name == expression && var.scope <= currentScope) {
-                    std::cout << var.name << ": " << var.value << std::endl;
-                    found = true;
+            int hash = computeHash(varName);
+            for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+                auto varIt = it->find(hash);
+                if (varIt != it->end()) {
+                    cout << varIt->second.name << " IS " << varIt->second.value << endl;
                     break;
                 }
             }
-
-            if (!found) {
-                std::cout << "Unknown variable " << expression << " at line " << line << std::endl;
+            if (scopes.empty() || scopes.back().find(hash) == scopes.back().end()) {
+                cout << varName << " IS UNDEFINED" << endl;
             }
         } else {
-            // Process expressions, assignment statements, increment and decrement operators.
-            // This is left as an exercise for the reader, as the implementation is quite involved.
+            string varName = command;
+            string operation;
+            iss >> operation;
+            int hash = computeHash(varName);
+            if (operation == "=") {
+                int value;
+                iss >> value;
+                for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+                    auto varIt = it->find(hash);
+                    if (varIt != it->end()) {
+                        varIt->second.value = value;
+                        break;
+                    }
+                }
+            } else if (operation == "++") {
+                for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+                    auto varIt = it->find(hash);
+                    if (varIt != it->end()) {
+                        varIt->second.value++;
+                        break;
+                    }
+                }
+            } else if (operation == "--") {
+                for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+                    auto varIt = it->find(hash);
+                    if (varIt != it->end()) {
+                    varIt->second.value--;
+                    break;
+                }
+            } 
         }
+        else if (operation == "*") {
+                int factor;
+                iss >> factor;
+                for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+                    auto varIt = it->find(hash);
+                    if (varIt != it->end()) {
+                        cout << varIt->second.name << " * 2 IS " << varIt->second.value * factor << endl;
+                        break;
+                    }
+                }
+            }
     }
-
-    inputFile.close();
     return 0;
+}
 }
