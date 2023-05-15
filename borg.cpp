@@ -102,7 +102,14 @@ int main() {
                     }
                 }
             }
+
+
+    // how to run:
+    // make a new txt file called "borg_program.txt"
+    // make sure it is in the same diretory
+    // execute the executable file with a sample text
     }
-    return 0;
+    
 }
+return 0;
 }
