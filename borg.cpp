@@ -25,7 +25,7 @@ int computeHash(string varName) {
 
 int main() {
     vector<unordered_map<int, Variable>> scopes;
-    ifstream infile("borg_program.borg");
+    ifstream infile("borg_program.txt");
     string line;
     while (getline(infile, line)) {
         istringstream iss(line);
