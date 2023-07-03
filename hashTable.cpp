@@ -2,7 +2,7 @@
 #include <vector>
 
 using namespace std;
-
+// hasth table that uses linear probing
 class HashTable {
 public:
     HashTable(size_t size) : table(size, -1), num_elements(0) {}
